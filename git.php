@@ -17,7 +17,7 @@
       return $considerService;
     }
 
-    die('Unknown service ' . $considerService . ', available: ' . implode(', ', $services));
+    die('Unknown service ' . $considerService . ', available: ' . implode(', ', $services) . "\r\n");
   };
 
   $shift = 0;
@@ -25,12 +25,12 @@
   if ($isFlag($repo)) {
     $service = $extractFlag($repo);
 
-    if ($argc === 2) die('Repository not specified');
+    if ($argc === 2) die('Repository not specified' . "\r\n");
     $repo = $argv[2];
     $shift = 1;
   }
 
-  if (strpos($repo, '/') === false) die('Not a valid repository representation');
+  if (strpos($repo, '/') === false) die('Not a valid repository representation' . "\r\n");
 
   $branch = 'master';
 
@@ -62,7 +62,7 @@
   $host = empty($service) ? $servicesUrls['github'] : $servicesUrls[$service];
   $url = "$host/repos/$repo/branches/$branch";
 
-  if (filter_var($url, FILTER_VALIDATE_URL) === false) die('Invalid repository name or branch name while accessing ' . $url);
+  if (filter_var($url, FILTER_VALIDATE_URL) === false) die('Invalid repository name or branch name while accessing ' . $url . "\r\n");
 
   $ch = curl_init($url);
   curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -86,7 +86,7 @@
   if (!empty($data->commit)) {
     echo $data->commit->sha;
   } else {
-    die('Commit sha could not be retrieved');
+    echo 'Commit sha could not be retrieved';
   }
 
   echo "\r\n";
