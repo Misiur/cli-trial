@@ -1,12 +1,12 @@
 #!/usr/bin/env php
-
 <?php
   if ($argc < 2) die('You have to provide repository');
 
-  $isFlag = function(string $opt) { return $opt[0] === '-' && strpos($opt, '=') !== false; };
+  $isFlag = function($opt) { return $opt[0] === '-' && strpos($opt, '=') !== false; };
   $repo = $argv[1];
 
   $services = ['github'];
+  $servicesUrls = ['github' => 'https://api.github.com'];
   $service = null;
   $isValidService = function(string $needle) use ($services) { return in_array($needle, $services); };
 
@@ -43,17 +43,50 @@
     } else {
       // Try service before branch
       $service = $consider[0];
+
       if ($isFlag($service)) {
         $service = $extractFlag($service);
-        $branch = $consider[1];
-      } else if ($isFlag($consider[1])) {
+        $branch = $consider[1] !== '' ? $consider[1] : 'master';
+      } else if (!empty($consider[1]) && $isFlag($consider[1])) {
         $service = $extractFlag($consider[1]);
         $branch = $consider[0];
       } else {
         $branch = $consider[0];
+        $service = $services[0];
       }
     }
+  } else {
+    $service = $services[0];
   }
 
-  var_dump($repo, $branch, $service);
+  $host = empty($service) ? $servicesUrls['github'] : $servicesUrls[$service];
+  $url = "$host/repos/$repo/branches/$branch";
 
+  if (filter_var($url, FILTER_VALIDATE_URL) === false) die('Invalid repository name or branch name while accessing ' . $url);
+
+  $ch = curl_init($url);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    // 'Accept' => 'application/vnd.github.nebula-preview+json',
+    // 'Accept' => 'application/vnd.github.groot-preview+json',,application/vnd.github.v3+json,sha',
+    'Accept: sha',
+    'User-Agent: valid',
+  ]);
+
+  curl_setopt($ch, CURLOPT_VERBOSE, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+  $content = curl_exec($ch);
+  $err = curl_errno($ch);
+  curl_close($ch);
+
+  $data = json_decode($content);
+  if (!empty($data->commit)) {
+    echo $data->commit->sha;
+  } else {
+    die('Commit sha could not be retrieved');
+  }
+
+  echo "\r\n";
